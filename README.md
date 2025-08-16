@@ -32,7 +32,7 @@ It centralizes fee tracking, slip generation, and communication with students, w
 
 <img width="1329" height="571" alt="gncc8" src="https://github.com/user-attachments/assets/9870124b-c3db-432a-9ad2-1fba392c8d87" />
 
-#Dark UI
+#Light Mode
 
 <img width="1329" height="542" alt="gncc9" src="https://github.com/user-attachments/assets/20646cd4-1137-49a5-9a16-9cd20170797c" />
 
