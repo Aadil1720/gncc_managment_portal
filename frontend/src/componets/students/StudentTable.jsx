@@ -50,6 +50,7 @@ const StudentTable = ({
     onRowsPerPageChange(parseInt(event.target.value, 10));
   };
 
+  console.log(students);
   return (
     <Paper sx={{ mt: 2, mb: 6, width: '100%' }}>
       <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
@@ -96,7 +97,7 @@ const StudentTable = ({
               </TableRow>
             ) : (
               students.map((student, index) => (
-
+                
                 <TableRow key={student._id} hover>
                   {!isMobile && (
                     <TableCell padding="checkbox">

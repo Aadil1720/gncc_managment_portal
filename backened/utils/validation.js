@@ -48,6 +48,7 @@ const feeSchema = Joi.object({
   transportFees: Joi.number().min(0),
   admissionFees:Joi.number().min(0),
   totalAmountPaid: Joi.number().positive(),
+  remarks: Joi.string().allow('').optional(), // <-- New field added
   datePaid: Joi.date().optional(),
    notes: Joi.string().allow('').optional(),
   isPaid:Joi.boolean()

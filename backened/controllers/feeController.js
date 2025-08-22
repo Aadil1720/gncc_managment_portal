@@ -175,7 +175,7 @@ exports.resendFeeSlipEmail = async (req, res) => {
 
 exports.createFee = async (req, res) => {
   try {
-    const { studentId, admissionFees = 0, tuitionFees = 0, transportFees = 0, month, year,notes } = req.body;
+    const { studentId, admissionFees = 0, tuitionFees = 0, transportFees = 0, month, year,remarks} = req.body;
 
 
     const student = await Student.findById(studentId);
@@ -193,7 +193,7 @@ exports.createFee = async (req, res) => {
       transportFees,
       month,
       year,
-      notes,
+      remarks,
       datePaid: new Date(),
     });
      
@@ -316,7 +316,6 @@ exports.listFees = async (req, res) => {
 
     const formattedFees = fees.map(fee => {
       const { paidMonths, dueMonths } = getFeeStatus(
-        fee.studentId.dateOfJoining,
         [fee], // Single fee record
         fee.studentId.inactivePeriods
       );
@@ -327,7 +326,7 @@ exports.listFees = async (req, res) => {
         fatherName: fee.studentId?.fatherName,
         admissionNumber: fee.studentId?.admissionNumber,
         paidMonths,
-        dueMonths
+        dueMonths,
       };
     });
 

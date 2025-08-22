@@ -82,7 +82,7 @@ exports.getStudentDescription = async (req, res) => {
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
     const fees = await Fee.find({ studentId: id }).select('month year totalAmountPaid');
-    const { paidMonths, dueMonths, totalPaid } = getFeeStatus(student.dateOfJoining, fees, student.inactivePeriods);
+    const { paidMonths, dueMonths, totalPaid } = getFeeStatus(fees, student.inactivePeriods);
     const age = calculateAge(student.dob);
 
     res.json({
@@ -106,7 +106,7 @@ exports.getStudentById = async (req, res) => {
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
     const fees = await Fee.find({ studentId: id }).select('month year');
-    const { paidMonths } = getFeeStatus(student.dateOfJoining, fees, student.inactivePeriods);
+    const { paidMonths } = getFeeStatus(fees, student.inactivePeriods);
     const startDate = new Date(student.dateOfJoining);
     const currentDate = new Date();
 
@@ -159,12 +159,18 @@ exports.filterByFeeDefaulter = async (req, res) => {
 
     for (const student of allStudents) {
       const studentFees = feesByStudent[student._id.toString()] || [];
-      const paidMonths = studentFees.map(f =>
-        new Date(f.year, f.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
-      );
+const paidMonths = studentFees.map(f => {
+  const y = Number(f.year);
+  const mIdx = monthToIndex(f.month, y);
+  if (!Number.isFinite(y) || mIdx === null) return null;
+  return new Date(y, mIdx, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+}).filter(Boolean);
+
+
+
       const paidSet = new Set(paidMonths);
 
-      const startDate = new Date(student.dateOfJoining);
+      const startDate = new Date(2025, 7, 1);
       const currentDate = new Date();
       let current = new Date(startDate);
       const dueMonths = [];
@@ -241,7 +247,8 @@ exports.getAllStudents = async (req, res) => {
       search = '',
       sortBy = 'name',
       order = 'asc',
-      activityStatus = '' // Add activityStatus filter
+      activityStatus = '',
+      feeStatus = '' // Add fee status filter
     } = req.query;
 
     // Build search filter
@@ -259,16 +266,18 @@ exports.getAllStudents = async (req, res) => {
       query.activityStatus = activityStatus;
     }
 
-    // Fetch students
+    // Fetch students with basic info
     const students = await Student.find(query)
-      .select('name admissionNumber contactNumber email fatherName motherName dateOfJoining activityStatus dob parentContact address')
-      .sort({ createdAt: -1 }); // Initial sort (will apply additional sort after enrichment)
+      .select('name admissionNumber contactNumber email fatherName motherName dateOfJoining activityStatus dob parentContact address inactivePeriods')
+      .sort({ createdAt: -1 });
 
     const studentIds = students.map(s => s._id);
 
+    // Fetch all relevant fees in one query
     const fees = await Fee.find({ studentId: { $in: studentIds } })
-      .select('studentId month year');
+      .select('studentId month year totalAmountPaid');
 
+    // Organize fees by student ID
     const feesByStudent = fees.reduce((acc, fee) => {
       const key = fee.studentId.toString();
       if (!acc[key]) acc[key] = [];
@@ -276,62 +285,34 @@ exports.getAllStudents = async (req, res) => {
       return acc;
     }, {});
 
- const enrichedStudents = students.map(student => {
-  const studentFees = feesByStudent[student._id.toString()] || [];
+    // Enrich student data with fee status using the same logic as getStudentDescription
+    const enrichedStudents = students.map(student => {
+      const studentFees = feesByStudent[student._id.toString()] || [];
+      
+      // Use the same getFeeStatus function that works correctly
+      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods || []);
+      const isFeeDefaulter = dueMonths.length > 0;
 
-  const paidMonthsSet = new Set(
-    studentFees.map(f =>
-      new Date(f.year, f.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
-    )
-  );
+      return {
+        ...student.toObject(),
+        isFeeDefaulter,
+        totalDueMonths: dueMonths.length,
+        totalPaid,
+        dueMonths: dueMonths.slice(0, 3), // Show first 3 due months for preview
+        totalDueMonthsCount: dueMonths.length // Full count
+      };
+    });
 
-  let startDate = new Date(student.dateOfJoining);
-
-  // 💡 Shift start date to 1st of next month if joining is after 24th
-  if (startDate.getDate() >= 25) {
-    startDate.setMonth(startDate.getMonth() + 1);
-    startDate.setDate(1);
-  }
-
-  const currentDate = new Date();
-  const dueMonths = [];
-
-  let current = new Date(startDate);
-  while (current <= currentDate) {
-    const label = current.toLocaleString('default', { month: 'long', year: 'numeric' });
-    const snapshot = new Date(current);
-
-    if (
-      !paidMonthsSet.has(label) &&
-      !isInInactivePeriod(snapshot, student.inactivePeriods)
-    ) {
-      dueMonths.push(label);
+    // Apply fee status filter if provided
+    let filteredStudents = enrichedStudents;
+    if (feeStatus === 'defaulter') {
+      filteredStudents = enrichedStudents.filter(s => s.isFeeDefaulter);
+    } else if (feeStatus === 'paid') {
+      filteredStudents = enrichedStudents.filter(s => !s.isFeeDefaulter);
     }
 
-    current.setMonth(current.getMonth() + 1);
-  }
-
-  const isFeeDefaulter = dueMonths.length > 0;
-
-  return {
-    _id: student._id,
-    name: student.name,
-    admissionNumber: student.admissionNumber,
-    contactNumber: student.contactNumber,
-    email: student.email,
-    fatherName: student.fatherName,
-    motherName: student.motherName,
-    dateOfJoining: student.dateOfJoining,
-    dob: student.dob,
-    activityStatus: student.activityStatus || 'active',
-    isFeeDefaulter,
-    totalDueMonths: dueMonths.length
-  };
-});
-
-
     // Apply sorting
-    const sortedStudents = enrichedStudents.sort((a, b) => {
+    const sortedStudents = filteredStudents.sort((a, b) => {
       const fieldA = a[sortBy];
       const fieldB = b[sortBy];
 
@@ -352,50 +333,22 @@ exports.getAllStudents = async (req, res) => {
       success: true,
       message: 'Students fetched successfully',
       data: paginatedStudents,
-      total: enrichedStudents.length,
+      total: filteredStudents.length,
       page: parseInt(page),
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      totalStudents: students.length
     });
 
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('Error fetching students:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching students',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
-// Helper function to check if date falls within inactive period
-// function isInInactivePeriod(date, inactivePeriods) {
-//   if (!inactivePeriods || inactivePeriods.length === 0) return false;
-  
-//   return inactivePeriods.some(period => {
-//     const from = new Date(period.from);
-//     const to = period.to ? new Date(period.to) : new Date(9999, 11, 31); // Far future date if no end date
-    
-//     return date >= from && date <= to;
-//   });
-// }
-
-
-
-// Set Inactive Period
-exports.setInactivePeriod = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { from, to } = req.body;
-
-    if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid student ID' });
-    if (!from || !to) return res.status(400).json({ success: false, message: 'Both from and to dates are required' });
-
-    const student = await Student.findById(id);
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-    student.activityStatus='inactive',
-    student.inactivePeriods.push({ from, to });
-    await student.save();
-
-    res.json({ success: true, message: 'Inactive period set successfully', student });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to set inactive period', error: err.message });
-  }
-};
 
 
 // Set Inactive Period (existing)

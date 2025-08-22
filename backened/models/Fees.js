@@ -45,6 +45,9 @@ const feeSchema = new mongoose.Schema({
   },
   isPaid:{
     type:Boolean
+  },
+  remarks: {        // <-- New field added
+    type: String,
   }
 });
 
