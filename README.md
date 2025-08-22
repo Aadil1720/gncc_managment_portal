@@ -5,7 +5,40 @@ It centralizes fee tracking, slip generation, and communication with students, w
 
 ---
 
+## 🚀 Project UI
+
+#Login Page
+
+<img width="1339" height="583" alt="gncc-fees1" src="https://github.com/user-attachments/assets/890c8a75-c2b3-4eb4-a6e4-f00405078a3d" />
+
+#Dashboard
+
+<img width="1336" height="546" alt="gnccFees3" src="https://github.com/user-attachments/assets/cb7ae8df-ce9a-4126-a157-8e04b8b00093" />
+
+#Students Managment UI
+
+<img width="1328" height="579" alt="gncc-fees2" src="https://github.com/user-attachments/assets/79d68c1c-ce53-49ed-b6fc-4bc3d50889db" />
+
+#Student Viewbar
+
+<img width="1339" height="567" alt="gncc7" src="https://github.com/user-attachments/assets/88f4f101-f883-4f29-9e8a-ac64be75b4d4" />
+
+#Stduent Forms
+
+<img width="1325" height="574" alt="gncc5" src="https://github.com/user-attachments/assets/ddc1f674-8772-4ca3-a49e-194984c55b3f" />
+<img width="1355" height="537" alt="gncc6" src="https://github.com/user-attachments/assets/c36bd54c-60d7-433e-97ca-cc81ffe0157c" />
+
+#Fees Managment
+
+<img width="1329" height="571" alt="gncc8" src="https://github.com/user-attachments/assets/9870124b-c3db-432a-9ad2-1fba392c8d87" />
+
+#Light Mode
+
+<img width="1329" height="542" alt="gncc9" src="https://github.com/user-attachments/assets/20646cd4-1137-49a5-9a16-9cd20170797c" />
+
+
 ## 🚀 Features
+
 
 ### **Student Management**
 - Add, update, and delete student profiles.
@@ -13,6 +46,7 @@ It centralizes fee tracking, slip generation, and communication with students, w
 - Search, filter, and sort students by multiple parameters.
 
 ### **Fee Management**
+
 - Add and update monthly fees (tuition + transport).
 - Track paid and pending fees.
 - Filter and list fee defaulters.
@@ -77,6 +111,7 @@ gncc-management-system/
 │ └── package.json
 │
 └── README.md
+
 
 
 
