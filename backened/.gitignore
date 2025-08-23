@@ -1,0 +1,13 @@
+# Node modules
+node_modules/
+
+# Env files
+.env
+
+
+# Build artifacts
+build
+dist
+
+# Misc
+.DS_Store

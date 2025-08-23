@@ -140,14 +140,27 @@ exports.filterByFeeDefaulter = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid defaulter parameter' });
     }
 
-    const allStudents = await Student.find({
-      name: { $regex: search, $options: 'i' }
-    }).select('name admissionNumber dateOfJoining email category status inactivePeriods');
+    // Build search filter
+    const query = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { admissionNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-    const fees = await Fee.find({
-      studentId: { $in: allStudents.map(s => s._id) }
-    }).select('studentId month year totalAmountPaid');
+    // Fetch students with basic info
+    const students = await Student.find(query)
+      .select('name admissionNumber dateOfJoining email category status inactivePeriods dob dateOfJoining tuitionFees')
+      .sort({ createdAt: -1 });
 
+    const studentIds = students.map(s => s._id);
+
+    // Fetch all relevant fees in one query
+    const fees = await Fee.find({ studentId: { $in: studentIds } })
+      .select('studentId month year totalAmountPaid');
+
+    // Organize fees by student ID
     const feesByStudent = fees.reduce((acc, fee) => {
       const key = fee.studentId.toString();
       if (!acc[key]) acc[key] = [];
@@ -157,40 +170,19 @@ exports.filterByFeeDefaulter = async (req, res) => {
 
     const result = [];
 
-    for (const student of allStudents) {
+    for (const student of students) {
       const studentFees = feesByStudent[student._id.toString()] || [];
-const paidMonths = studentFees.map(f => {
-  const y = Number(f.year);
-  const mIdx = monthToIndex(f.month, y);
-  if (!Number.isFinite(y) || mIdx === null) return null;
-  return new Date(y, mIdx, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-}).filter(Boolean);
-
-
-
-      const paidSet = new Set(paidMonths);
-
-      const startDate = new Date(2025, 7, 1);
-      const currentDate = new Date();
-      let current = new Date(startDate);
-      const dueMonths = [];
-
-      while (current <= currentDate) {
-        const label = current.toLocaleString('default', { month: 'long', year: 'numeric' });
-        const snapshotDate = new Date(current);
-        if (!paidSet.has(label) && !isInInactivePeriod(snapshotDate, student.inactivePeriods)) {
-          dueMonths.push(label);
-        }
-        current.setMonth(current.getMonth() + 1);
-      }
-
+      
+      // Use the getFeeStatus function for consistent calculation
+      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods || []);
+      
       const isDefaulter = dueMonths.length > 0;
 
       if ((defaulterParam === 'true' && isDefaulter) || (defaulterParam === 'false' && !isDefaulter)) {
         let emailNotified = false;
         if (notify === 'true' && student.email) {
           try {
-            await sendFeeReminderEmail(student.email, student.name);
+            await sendFeeReminderEmail(student.email, student.name, dueMonths, student.tuitionFees || 0);
             emailNotified = true;
           } catch (e) {
             console.error(`Email failed for ${student.email}:`, e.message);
@@ -204,11 +196,12 @@ const paidMonths = studentFees.map(f => {
           isFeeDefaulter: isDefaulter,
           category: student.category,
           status: student.status,
-          totalPaid: studentFees.reduce((sum, f) => sum + f.totalAmountPaid, 0),
+          totalPaid,
           paidMonths,
           dueMonths,
           totalDueMonths: dueMonths.length,
-          emailNotified
+          emailNotified,
+          tuitionFees: student.tuitionFees || 0
         });
       }
     }
@@ -223,18 +216,27 @@ const paidMonths = studentFees.map(f => {
       }
     });
 
-    const paginated = sorted.slice((page - 1) * limit, page * limit);
+    const startIndex = (page - 1) * limit;
+    const paginated = sorted.slice(startIndex, startIndex + parseInt(limit));
 
     res.json({
       success: true,
       count: paginated.length,
       total: result.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
       students: paginated
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Error filtering by fee defaulter:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error filtering students',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
+
 
 
 // Get All Students with defaulter status and due months count

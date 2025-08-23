@@ -17,6 +17,8 @@ export const createFee = async (feeData) => {
 
 // Get all fees with pagination and filtering
 export const getFees = async (params = {}) => {
+
+  
   try {
     const response = await api.get('/fees/by/monthAndYear/all', { params });
     console.log(response)

@@ -1,4 +1,4 @@
-
+ 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -181,7 +181,6 @@ const Students = () => {
         ? await studentService.getFeeDefaulters('true', params)
         : await studentService.getStudents(params);
 
-        console.log(response.data)
       if (response.success) {
         
         const total = showDefaulters ? response.data.total : response.data.total;
@@ -257,6 +256,8 @@ const Students = () => {
     setLoading(true);
     try {
       const response = await studentService.getStudentDecriptionById(id);
+        console.log("handleview->"+response.success)
+        console.log("haldeview->"+response.data)
       if (response.success) {
         setViewData(response.data);
         setOpenViewDialog(true);

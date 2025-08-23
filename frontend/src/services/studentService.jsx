@@ -28,7 +28,6 @@ const studentService = {
   getStudentDecriptionById: async (id) => {
     try {
       const response = await api.get(`/students/description/${id}`);
-      console.log('service->', response.data.age);
       return { success: response.data.success, data: response.data };
     } catch (error) {
       return {

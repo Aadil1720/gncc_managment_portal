@@ -12,6 +12,7 @@ import { useTheme } from '@mui/material/styles';
 import { Email, Lock } from '@mui/icons-material';
 import { useAuth } from '../componets/context/AuthContext';
 import { useSnackbar } from 'notistack';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Login = () => {
   const theme = useTheme();
@@ -27,7 +28,7 @@ const Login = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
