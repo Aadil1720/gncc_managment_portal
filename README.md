@@ -129,7 +129,7 @@ Edit
 cd backend
 npm install
 cp .env.example .env   # Add your environment variables
-npm run dev
+npm start
 
 3. Setup Frontend
 bash
@@ -137,12 +137,4 @@ Copy
 Edit
 cd ../frontend
 npm install
-
-cp .env.example .env   # Add your environment variables
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-EMAIL_USER=your_email
-EMAIL_PASS=your_email_password
-
 npm start
