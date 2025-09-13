@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -7,6 +7,7 @@ import {
   Typography,
   Paper,
   InputAdornment,
+  CircularProgress
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Email, Lock } from '@mui/icons-material';
@@ -16,16 +17,25 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Login = () => {
   const theme = useTheme();
-  const { login } = useAuth();
+  const { login, user } = useAuth(); // Added user to check auth state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-   const { enqueueSnackbar } = useSnackbar();
-    const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the return URL or default to dashboard
+  const from = location.state?.from?.pathname || '/';
+  
+  console.log('Redirecting to:', from); // Debug log
+  console.log('Current user state:', user); // Debug log
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -34,15 +44,29 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       });
        
-      if (!response.ok) throw new Error('Invalid credentials');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
 
       const data = await response.json();
+      console.log('Login response:', data); // Debug log
+      
       login(data.token); // Save JWT token
       enqueueSnackbar('Login successful', { variant: 'success' });
-      navigate('/'); // 👈 Redirect to Dashboard
+      
+      // Add a small delay to ensure state updates before redirecting
+      setTimeout(() => {
+        console.log('Navigating to:', from); // Debug log
+        navigate(from, { replace: true });
+      }, 100);
+      
     } catch (err) {
-       enqueueSnackbar(err.message || 'Login failed', { variant: 'error' });
-      setError(err.message);
+      const errorMessage = err.message || 'Login failed';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,6 +102,8 @@ const Login = () => {
             margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -94,6 +120,8 @@ const Login = () => {
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -115,8 +143,10 @@ const Login = () => {
             variant="contained"
             color="primary"
             sx={{ mt: 3 }}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
       </Paper>

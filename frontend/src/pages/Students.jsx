@@ -1,4 +1,3 @@
- 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -12,6 +11,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   List,
   ListItem,
@@ -34,6 +34,42 @@ import StudentForm from '../componets/students/StudentForm';
 import SearchAndFilter from '../componets/students/SearchAndFilterForm';
 import StudentTable from '../componets/students/StudentTable';
 import StudentDetailsDialog from '../componets/students/StudentDetails';
+
+// Delete Confirmation Dialog Component
+const DeleteConfirmationDialog = ({ open, onClose, onConfirm, student, loading }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+    >
+      <DialogTitle id="alert-dialog-title">
+        Confirm Student Deletion
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText id="alert-dialog-description">
+          Are you sure you want to delete the student, 
+          This action cannot be undone.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button 
+          onClick={onConfirm} 
+          color="error" 
+          autoFocus 
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : null}
+        >
+          {loading ? 'Deleting...' : 'Delete'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 const InactivePeriodForm = ({ open, onClose, onSubmit }) => {
   const [period, setPeriod] = useState({
@@ -158,8 +194,13 @@ const Students = () => {
     periods: [],
     studentId: null
   });
-
- 
+  
+  // State for delete confirmation dialog
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    student: null,
+    loading: false
+  });
 
   const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
@@ -182,11 +223,9 @@ const Students = () => {
         : await studentService.getStudents(params);
 
       if (response.success) {
-        
         const total = showDefaulters ? response.data.total : response.data.total;
-             setTotalStudents(total); 
-        showDefaulters?setStudents(response.data.students)
-        :setStudents(response.data.data)
+        setTotalStudents(total); 
+        showDefaulters ? setStudents(response.data.students) : setStudents(response.data.data);
       } else {
         enqueueSnackbar(response.error || 'Failed to load students', { variant: 'error' });
       }
@@ -201,16 +240,18 @@ const Students = () => {
     fetchStudents();
   }, [fetchStudents]);
 
-
-
   const handleAddStudent = () => {
     setCurrentStudent(null);
     setOpenForm(true);
   };
 
   const handleEditStudent = (student) => {
-    setCurrentStudent(student);
-    setOpenForm(true);
+    setCurrentStudent({
+    ...student,
+    parentContact: student.parentContact || student.parent_contact || "",
+    address: student.address || student.residential_address || "",
+  });
+  setOpenForm(true);
   };
 
   const handleSaveStudent = async (studentData) => {
@@ -235,12 +276,23 @@ const Students = () => {
     }
   };
 
-  const handleDeleteStudent = async (id) => {
-    setLoading(true);
+  // Open delete confirmation dialog
+  const handleDeleteClick = (student) => {
+    setDeleteDialog({
+      open: true,
+      student: student,
+      loading: false
+    });
+  };
+
+  // Handle confirmed deletion
+  const handleDeleteConfirm = async () => {
+    setDeleteDialog(prev => ({ ...prev, loading: true }));
+    
     try {
-      const response = await studentService.deleteStudent(id);
+      const response = await studentService.deleteStudent(deleteDialog.student._id);
       if (response.success) {
-        enqueueSnackbar('Student deleted', { variant: 'info' });
+        enqueueSnackbar('Student deleted successfully', { variant: 'success' });
         fetchStudents();
       } else {
         enqueueSnackbar(response.error, { variant: 'error' });
@@ -248,16 +300,27 @@ const Students = () => {
     } catch (error) {
       enqueueSnackbar('Error deleting student', { variant: 'error' });
     } finally {
-      setLoading(false);
+      setDeleteDialog({
+        open: false,
+        student: null,
+        loading: false
+      });
     }
+  };
+
+  // Close delete confirmation dialog
+  const handleDeleteCancel = () => {
+    setDeleteDialog({
+      open: false,
+      student: null,
+      loading: false
+    });
   };
 
   const handleView = async (id) => {
     setLoading(true);
     try {
       const response = await studentService.getStudentDecriptionById(id);
-        console.log("handleview->"+response.success)
-        console.log("haldeview->"+response.data)
       if (response.success) {
         setViewData(response.data);
         setOpenViewDialog(true);
@@ -423,25 +486,25 @@ const Students = () => {
         </Box>
       </Box>
 
-   <StudentTable
-  students={students}
-  onView={handleView}
-  onEdit={handleEditStudent}
-  onDelete={handleDeleteStudent}
-  onMarkInactive={handleOpenInactiveForm}
-  onReactivate={handleReactivate}
-  onViewInactivePeriods={handleViewInactivePeriods}
-  page={page}
-  rowsPerPage={rowsPerPage}
-  totalCount={totalStudents}
-  onPageChange={(newPage) => {
-    setPage(newPage); // This was missing
-  }}
-  onRowsPerPageChange={(newRowsPerPage) => {
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-  }}
-/>
+      <StudentTable
+        students={students}
+        onView={handleView}
+        onEdit={handleEditStudent}
+        onDelete={handleDeleteClick} // Updated to use the new handler
+        onMarkInactive={handleOpenInactiveForm}
+        onReactivate={handleReactivate}
+        onViewInactivePeriods={handleViewInactivePeriods}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={totalStudents}
+        onPageChange={(newPage) => {
+          setPage(newPage);
+        }}
+        onRowsPerPageChange={(newRowsPerPage) => {
+          setRowsPerPage(newRowsPerPage);
+          setPage(0);
+        }}
+      />
 
       <StudentForm
         open={openForm}
@@ -468,6 +531,15 @@ const Students = () => {
         periods={inactivePeriodsDialog.periods}
         studentId={inactivePeriodsDialog.studentId}
         onRemove={handleRemoveInactivePeriod}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        student={deleteDialog.student}
+        loading={deleteDialog.loading}
       />
 
       <Backdrop
