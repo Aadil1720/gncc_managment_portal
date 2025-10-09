@@ -17,7 +17,8 @@ const studentSchema = Joi.object({
   inactivePeriods: Joi.array().items(
     Joi.object({
       from: Joi.date().required(),
-      to: Joi.date().optional()
+      to: Joi.date().optional(),
+      reason: Joi.string().allow('').optional() // ✅ New optional field
     })
   ).optional(),
   contactNumber: Joi.string().optional(), // ✅ Optional

@@ -27,16 +27,22 @@ const studentSchema = new mongoose.Schema({
   inactivePeriods: [
     {
       from: { type: Date, required: true },
-      to: { type: Date } // Can be null if student is still inactive
+      to: { type: Date }, // Can be null if student is still inactive
+      reason: { type: String } 
     }
   ],
   admissionFees: { type: Number},
   tuitionFees: { type: Number},
   dateOfJoining: { type: Date, default: Date.now }
-});
+},
+{
+  timestamps: true  // 👈 yaha add karo
+}
+);
 
 
-studentSchema.index({ name: 1, dob: 1 }, { unique: true }); 
+studentSchema.index({ name: 1, dob: 1,fatherName: 1 }, { unique: true }); 
+
 
  
 // 📌 Pre-save hook: Auto-generate admission number

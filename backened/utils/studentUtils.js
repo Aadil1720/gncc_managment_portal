@@ -57,10 +57,13 @@ function isInInactivePeriod(date, inactivePeriods = []) {
   });
 }
 
+
+// In studentUtils.js - update getFeeStatus function
+
 // Fee status calculation function
-const getFeeStatus = (fees = [], inactivePeriods = []) => {
-  const currentDate = new Date();
-  const start = new Date(2025, 7, 1); // 1 Aug 2025 (month is 0-based)
+const getFeeStatus = (fees = [], inactivePeriods = [],startDate = new Date(2025, 7, 1)) => {
+ const currentDate = new Date();
+  const start = new Date(startDate); // 1 Aug 2025 (month is 0-based)
 
   // Build a set of "Month YYYY" labels for paid months
   const paidMonthsSet = new Set();

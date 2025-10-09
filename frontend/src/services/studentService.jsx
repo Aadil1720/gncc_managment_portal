@@ -90,6 +90,7 @@ const studentService = {
   setInactivePeriod: async (id, data) => {
     try {
       const response = await api.post(`/students/${id}/set-inactive`, data);
+      console.log(response);
       return { success: response.data.success, data: response.data.data };
     } catch (error) {
       return {

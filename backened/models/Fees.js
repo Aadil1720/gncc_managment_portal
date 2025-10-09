@@ -44,11 +44,14 @@ const feeSchema = new mongoose.Schema({
     type:String
   },
   isPaid:{
-    type:Boolean
+    type:Boolean,
+    default:true
   },
   remarks: {        // <-- New field added
     type: String,
   }
+},{
+  timestamps:true
 });
 
 // Automatically calculate totalAmountPaid before saving

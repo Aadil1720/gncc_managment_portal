@@ -1,0 +1,323 @@
+{
+  "generatedAt": "2025-10-08T13:48:27.426Z",
+  "totalStudents": 214,
+  "exactDuplicates": {
+    "count": 1,
+    "totalRecords": 2,
+    "groups": [
+      {
+        "_id": {
+          "name": "shivansh ghosh",
+          "fatherName": "surjodoy"
+        },
+        "count": 2,
+        "students": [
+          {
+            "id": "68de6f052a6ce804a8494101",
+            "name": "Shivansh ghosh ",
+            "fatherName": "Surjodoy",
+            "admissionNumber": "GNCC2025124",
+            "email": "surjodoyghosh040@gmail.com"
+          },
+          {
+            "id": "68e0f7b6dbfb4100fe49e1bb",
+            "name": "Shivansh ghosh",
+            "fatherName": "Surjodoy ",
+            "admissionNumber": "GNCC2025172",
+            "email": "surjodoyghosh040@gmail.com"
+          }
+        ]
+      }
+    ]
+  },
+  "nameOnlyDuplicates": {
+    "count": 7,
+    "groups": [
+      {
+        "_id": "mohd shad",
+        "count": 3,
+        "students": [
+          {
+            "id": "68a37409ea0bc8e0b990aac1",
+            "name": "Mohd Shad",
+            "fatherName": "Mohd Sahabuddin",
+            "admissionNumber": "GNCC2025052",
+            "email": "nafeeszabi123@gmail.com"
+          },
+          {
+            "id": "68dfb746cb4b15c6022bc11f",
+            "name": "Mohd shad",
+            "fatherName": "Mohd shabuddin ",
+            "admissionNumber": "GNCC2025154",
+            "email": "mafeesazabi123@gmail.com"
+          },
+          {
+            "id": "68e64600924b9fdc7d4538a0",
+            "name": "Mohd shad",
+            "fatherName": "Chand mohd",
+            "admissionNumber": "GNCC2025207",
+            "email": "na@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "kush mavi",
+        "count": 2,
+        "students": [
+          {
+            "id": "68a37409ea0bc8e0b990aabd",
+            "name": "Kush mavi",
+            "fatherName": "Rhit Mavi",
+            "admissionNumber": "GNCC2025040",
+            "email": "rohitmavi2005@gmail.com"
+          },
+          {
+            "id": "68dfb18fcb4b15c6022bc101",
+            "name": "Kush mavi",
+            "fatherName": "Rohit mavi",
+            "admissionNumber": "GNCC2025149",
+            "email": "rohitmavi@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "sonu",
+        "count": 2,
+        "students": [
+          {
+            "id": "68a37409ea0bc8e0b990aad7",
+            "name": "Sonu",
+            "fatherName": "Rovin Singh",
+            "admissionNumber": "GNCC2025012",
+            "email": "edev7679@gmail.com"
+          },
+          {
+            "id": "68dfc205438ce2509b9b1f6f",
+            "name": "Sonu",
+            "fatherName": "Arvind",
+            "admissionNumber": "GNCC2025159",
+            "email": "sonukashyap4145@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "ayush singh",
+        "count": 2,
+        "students": [
+          {
+            "id": "68d40bac6f097c0131d27ea8",
+            "name": "Ayush singh ",
+            "fatherName": "Anup Singh ",
+            "admissionNumber": "GNCC2025117",
+            "email": "na@gmail.com"
+          },
+          {
+            "id": "68de77092a6ce804a8494154",
+            "name": "Ayush singh ",
+            "fatherName": "Mavish",
+            "admissionNumber": "GNCC2025134",
+            "email": "singhayush@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "kanav manglik",
+        "count": 2,
+        "students": [
+          {
+            "id": "68a37409ea0bc8e0b990aab7",
+            "name": "Kanav manglik",
+            "fatherName": "Pallav manglik",
+            "admissionNumber": "GNCC2025029",
+            "email": "manglikpallav14@gmail.com"
+          },
+          {
+            "id": "68dfbabbcb4b15c6022bc1ab",
+            "name": "Kanav manglik ",
+            "fatherName": "Mr.pallav manglik ",
+            "admissionNumber": "GNCC2025156",
+            "email": "manglikpallav14@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "shivansh ghosh",
+        "count": 2,
+        "students": [
+          {
+            "id": "68de6f052a6ce804a8494101",
+            "name": "Shivansh ghosh ",
+            "fatherName": "Surjodoy",
+            "admissionNumber": "GNCC2025124",
+            "email": "surjodoyghosh040@gmail.com"
+          },
+          {
+            "id": "68e0f7b6dbfb4100fe49e1bb",
+            "name": "Shivansh ghosh",
+            "fatherName": "Surjodoy ",
+            "admissionNumber": "GNCC2025172",
+            "email": "surjodoyghosh040@gmail.com"
+          }
+        ]
+      },
+      {
+        "_id": "chintu gautam",
+        "count": 2,
+        "students": [
+          {
+            "id": "68d411c76f097c0131d27f55",
+            "name": "Chintu gautam",
+            "fatherName": "Mr. Harkishan ",
+            "admissionNumber": "GNCC2025122",
+            "email": "harkishansingh1983@gmail.com"
+          },
+          {
+            "id": "68e0f63edbfb4100fe49e0ce",
+            "name": "Chintu gautam ",
+            "fatherName": "Mr.harkishan",
+            "admissionNumber": "GNCC2025171",
+            "email": "harkishnasing1983@gmail.com"
+          }
+        ]
+      }
+    ]
+  },
+  "similarNames": [
+    {
+      "name": "ayush singh",
+      "count": 2,
+      "students": [
+        {
+          "id": "68d40bac6f097c0131d27ea8",
+          "name": "Ayush singh ",
+          "fatherName": "Anup Singh ",
+          "admissionNumber": "GNCC2025117"
+        },
+        {
+          "id": "68de77092a6ce804a8494154",
+          "name": "Ayush singh ",
+          "fatherName": "Mavish",
+          "admissionNumber": "GNCC2025134"
+        }
+      ]
+    },
+    {
+      "name": "chintu gautam",
+      "count": 2,
+      "students": [
+        {
+          "id": "68d411c76f097c0131d27f55",
+          "name": "Chintu gautam",
+          "fatherName": "Mr. Harkishan ",
+          "admissionNumber": "GNCC2025122"
+        },
+        {
+          "id": "68e0f63edbfb4100fe49e0ce",
+          "name": "Chintu gautam ",
+          "fatherName": "Mr.harkishan",
+          "admissionNumber": "GNCC2025171"
+        }
+      ]
+    },
+    {
+      "name": "kanav manglik",
+      "count": 2,
+      "students": [
+        {
+          "id": "68a37409ea0bc8e0b990aab7",
+          "name": "Kanav manglik",
+          "fatherName": "Pallav manglik",
+          "admissionNumber": "GNCC2025029"
+        },
+        {
+          "id": "68dfbabbcb4b15c6022bc1ab",
+          "name": "Kanav manglik ",
+          "fatherName": "Mr.pallav manglik ",
+          "admissionNumber": "GNCC2025156"
+        }
+      ]
+    },
+    {
+      "name": "kush mavi",
+      "count": 2,
+      "students": [
+        {
+          "id": "68a37409ea0bc8e0b990aabd",
+          "name": "Kush mavi",
+          "fatherName": "Rhit Mavi",
+          "admissionNumber": "GNCC2025040"
+        },
+        {
+          "id": "68dfb18fcb4b15c6022bc101",
+          "name": "Kush mavi",
+          "fatherName": "Rohit mavi",
+          "admissionNumber": "GNCC2025149"
+        }
+      ]
+    },
+    {
+      "name": "mohd shad",
+      "count": 3,
+      "students": [
+        {
+          "id": "68a37409ea0bc8e0b990aac1",
+          "name": "Mohd Shad",
+          "fatherName": "Mohd Sahabuddin",
+          "admissionNumber": "GNCC2025052"
+        },
+        {
+          "id": "68e64600924b9fdc7d4538a0",
+          "name": "Mohd shad",
+          "fatherName": "Chand mohd",
+          "admissionNumber": "GNCC2025207"
+        },
+        {
+          "id": "68dfb746cb4b15c6022bc11f",
+          "name": "Mohd shad",
+          "fatherName": "Mohd shabuddin ",
+          "admissionNumber": "GNCC2025154"
+        }
+      ]
+    },
+    {
+      "name": "shivansh ghosh",
+      "count": 2,
+      "students": [
+        {
+          "id": "68e0f7b6dbfb4100fe49e1bb",
+          "name": "Shivansh ghosh",
+          "fatherName": "Surjodoy ",
+          "admissionNumber": "GNCC2025172"
+        },
+        {
+          "id": "68de6f052a6ce804a8494101",
+          "name": "Shivansh ghosh ",
+          "fatherName": "Surjodoy",
+          "admissionNumber": "GNCC2025124"
+        }
+      ]
+    },
+    {
+      "name": "sonu",
+      "count": 2,
+      "students": [
+        {
+          "id": "68dfc205438ce2509b9b1f6f",
+          "name": "Sonu",
+          "fatherName": "Arvind",
+          "admissionNumber": "GNCC2025159"
+        },
+        {
+          "id": "68a37409ea0bc8e0b990aad7",
+          "name": "Sonu",
+          "fatherName": "Rovin Singh",
+          "admissionNumber": "GNCC2025012"
+        }
+      ]
+    }
+  ],
+  "missingFatherNames": {
+    "count": 0,
+    "students": []
+  }
+}

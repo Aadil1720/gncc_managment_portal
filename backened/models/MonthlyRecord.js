@@ -6,6 +6,9 @@ const monthlyRecordSchema = new mongoose.Schema({
   totalFees: { type: Number, required: true },
   totalExpenditure: { type: Number, required: true },
   netIncome: { type: Number, required: true },
+},
+{
+  timestamps:true
 });
 
 module.exports = mongoose.model('MonthlyRecord', monthlyRecordSchema);

@@ -16,6 +16,8 @@ router.post('/:id/set-inactive', studentController.setInactivePeriod);
 router.post('/:id/reactivate', studentController.reactivateStudent);
 router.get('/:id/inactive-periods', studentController.getInactivePeriods);
 router.delete('/:id/inactive-periods/:periodId', studentController.removeInactivePeriod);
+router.put('/:id/inactive-periods/:periodId', studentController.updateInactivePeriod);
+router.put('/:id/inactive-periods/:periodId/reason', studentController.updateInactivePeriodReason);
 
 
 

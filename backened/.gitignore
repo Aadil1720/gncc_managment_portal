@@ -4,6 +4,8 @@ node_modules/
 # Env files
 .env
 
+# Data files
+studentData.json
 
 # Build artifacts
 build

@@ -1,21 +1,67 @@
 
-
 const Student = require('../models/student');
 const Fee = require('../models/Fees');
-const { calculateAge,sendFeeReminderEmail } = require('../utils/generalUtility');
-const{isValidObjectId,getFeeStatus,isInInactivePeriod}=require('../utils/studentUtils')
+const { calculateAge, sendFeeReminderEmail } = require('../utils/generalUtility');
+const { isValidObjectId, getFeeStatus, isInInactivePeriod } = require('../utils/studentUtils');
 
-// Create Student
+// Helper function to get fee calculation start date
+const getFeeCalculationStartDate = (dateOfJoining) => {
+  const defaultStartDate = new Date(2025, 7, 1); // August 1, 2025 (month is 0-based)
+  const joiningDate = new Date(dateOfJoining);
+  
+  // If student joined after default start date, use joining date
+  // If student joined before default start date, use default start date
+  return joiningDate > defaultStartDate ? joiningDate : defaultStartDate;
+};
+
+// Helper function to get academic year months
+const getAcademicYearMonths = (startDate, endDate, inactivePeriods = []) => {
+  const months = [];
+  let current = new Date(startDate);
+  current.setDate(1); // Ensure we start from the first day of month
+  
+  const end = new Date(endDate);
+  end.setDate(1);
+
+  while (current <= end) {
+    const monthSnapshot = new Date(current.getFullYear(), current.getMonth(), 1);
+    
+    if (!isInInactivePeriod(monthSnapshot, inactivePeriods)) {
+      months.push({
+        label: current.toLocaleString('default', { month: 'long', year: 'numeric' }),
+        year: current.getFullYear(),
+        month: current.getMonth(),
+        timestamp: new Date(monthSnapshot)
+      });
+    }
+    
+    current.setMonth(current.getMonth() + 1);
+  }
+  
+  return months;
+};
+
+// Create Student - Updated with name and fatherName uniqueness check
 exports.createStudent = async (req, res) => {
   try {
-    const { name, dob } = req.body;
+    const { name, fatherName } = req.body;
 
-    const existingStudent = await Student.findOne({ name, dob });
+    // Check if student already exists with same name and father's name
+    const existingStudent = await Student.findOne({ 
+      name: name.trim(), 
+      fatherName: fatherName.trim() 
+    });
+
     if (existingStudent) {
       return res.status(409).json({
         success: false,
-        message: "Student already exists with the same name and date of birth.",
-        student: existingStudent
+        message: "Student already exists with the same name and father's name.",
+        student: {
+          _id: existingStudent._id,
+          name: existingStudent.name,
+          fatherName: existingStudent.fatherName,
+          admissionNumber: existingStudent.admissionNumber
+        }
       });
     }
 
@@ -29,26 +75,71 @@ exports.createStudent = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to create student.", error: err.message });
+    // Handle validation errors and other issues
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Validation error", 
+        error: err.message 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to create student.", 
+      error: err.message 
+    });
   }
 };
 
-// Update Student
+// Update Student - Also check for duplicates during update
 exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
+    const { name, fatherName } = req.body;
+    
     if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: "Invalid student ID" });
+
+    // Check for duplicate student (excluding current student)
+    if (name && fatherName) {
+      const existingStudent = await Student.findOne({
+        name: name.trim(),
+        fatherName: fatherName.trim(),
+        _id: { $ne: id }
+      });
+
+      if (existingStudent) {
+        return res.status(409).json({
+          success: false,
+          message: "Another student already exists with the same name and father's name.",
+          student: {
+            _id: existingStudent._id,
+            name: existingStudent.name,
+            fatherName: existingStudent.fatherName,
+            admissionNumber: existingStudent.admissionNumber
+          }
+        });
+      }
+    }
 
     const updatedStudent = await Student.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
     if (!updatedStudent) return res.status(404).json({ success: false, message: 'Student not found' });
 
     res.json({ success: true, message: 'Student updated successfully', student: updatedStudent });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Validation error", 
+        error: err.message 
+      });
+    }
+    
     res.status(500).json({ success: false, message: 'Failed to update student', error: err.message });
   }
 };
 
-
+// Rest of the controller functions remain the same...
 exports.deleteStudent = async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +147,7 @@ exports.deleteStudent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid student ID' });
     }
 
-    const deleted = await Student.findOneAndDelete({ _id: id }); // ✅ triggers pre hook
+    const deleted = await Student.findOneAndDelete({ _id: id });
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
@@ -71,7 +162,6 @@ exports.deleteStudent = async (req, res) => {
   }
 };
 
-
 // Get Student Description
 exports.getStudentDescription = async (req, res) => {
   try {
@@ -81,15 +171,25 @@ exports.getStudentDescription = async (req, res) => {
     const student = await Student.findById(id);
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
-    const fees = await Fee.find({ studentId: id }).select('month year totalAmountPaid');
-    const { paidMonths, dueMonths, totalPaid } = getFeeStatus(fees, student.inactivePeriods);
+    const fees = await Fee.find({ studentId: id }).select('month year totalAmountPaid paymentDate');
+    
+    // Calculate fee status with dynamic start date
+    const feeStartDate = getFeeCalculationStartDate(student.dateOfJoining);
+    const { paidMonths, dueMonths, totalPaid } = getFeeStatus(fees, student.inactivePeriods, feeStartDate);
+    
     const age = calculateAge(student.dob);
 
     res.json({
       success: true,
       student,
       age,
-      feesSummary: { totalPaid, paidMonths, dueMonths, totalDueMonths: dueMonths.length }
+      feesSummary: { 
+        totalPaid, 
+        paidMonths, 
+        dueMonths, 
+        totalDueMonths: dueMonths.length,
+        feeCalculationStart: feeStartDate
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to get student description', error: err.message });
@@ -105,25 +205,28 @@ exports.getStudentById = async (req, res) => {
     const student = await Student.findById(id).select('name dob admissionNumber category status dateOfJoining inactivePeriods');
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
-    const fees = await Fee.find({ studentId: id }).select('month year');
-    const { paidMonths } = getFeeStatus(fees, student.inactivePeriods);
-    const startDate = new Date(student.dateOfJoining);
+    const fees = await Fee.find({ studentId: id }).select('month year paymentDate');
+    
+    // Calculate fee status with dynamic start date
+    const feeStartDate = getFeeCalculationStartDate(student.dateOfJoining);
+    const { paidMonths } = getFeeStatus(fees, student.inactivePeriods, feeStartDate);
+    
     const currentDate = new Date();
+    
+    // Get all expected months considering inactive periods
+    const expectedMonths = getAcademicYearMonths(feeStartDate, currentDate, student.inactivePeriods);
+    const totalExpectedMonths = expectedMonths.length;
 
-    let current = new Date(startDate);
-    let totalMonths = 0;
-    while (current <= currentDate) {
-      if (!isInInactivePeriod(current, student.inactivePeriods)) {
-        totalMonths++;
-      }
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    const isFeeDefaulter = paidMonths.length < totalMonths;
+    const isFeeDefaulter = paidMonths.length < totalExpectedMonths;
 
     res.json({
       success: true,
-      student: { ...student.toObject(), isFeeDefaulter }
+      student: { 
+        ...student.toObject(), 
+        isFeeDefaulter,
+        totalExpectedMonths,
+        paidMonthsCount: paidMonths.length
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to get student', error: err.message });
@@ -158,7 +261,7 @@ exports.filterByFeeDefaulter = async (req, res) => {
 
     // Fetch all relevant fees in one query
     const fees = await Fee.find({ studentId: { $in: studentIds } })
-      .select('studentId month year totalAmountPaid');
+      .select('studentId month year totalAmountPaid paymentDate');
 
     // Organize fees by student ID
     const feesByStudent = fees.reduce((acc, fee) => {
@@ -173,8 +276,9 @@ exports.filterByFeeDefaulter = async (req, res) => {
     for (const student of students) {
       const studentFees = feesByStudent[student._id.toString()] || [];
       
-      // Use the getFeeStatus function for consistent calculation
-      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods || []);
+      // Calculate fee status with dynamic start date
+      const feeStartDate = getFeeCalculationStartDate(student.dateOfJoining);
+      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods, feeStartDate);
       
       const isDefaulter = dueMonths.length > 0;
 
@@ -201,7 +305,8 @@ exports.filterByFeeDefaulter = async (req, res) => {
           dueMonths,
           totalDueMonths: dueMonths.length,
           emailNotified,
-          tuitionFees: student.tuitionFees || 0
+          tuitionFees: student.tuitionFees || 0,
+          feeCalculationStart: feeStartDate
         });
       }
     }
@@ -237,8 +342,6 @@ exports.filterByFeeDefaulter = async (req, res) => {
   }
 };
 
-
-
 // Get All Students with defaulter status and due months count
 exports.getAllStudents = async (req, res) => {
   try {
@@ -250,7 +353,7 @@ exports.getAllStudents = async (req, res) => {
       sortBy = 'name',
       order = 'asc',
       activityStatus = '',
-      feeStatus = '' // Add fee status filter
+      feeStatus = ''
     } = req.query;
 
     // Build search filter
@@ -277,7 +380,7 @@ exports.getAllStudents = async (req, res) => {
 
     // Fetch all relevant fees in one query
     const fees = await Fee.find({ studentId: { $in: studentIds } })
-      .select('studentId month year totalAmountPaid');
+      .select('studentId month year totalAmountPaid paymentDate');
 
     // Organize fees by student ID
     const feesByStudent = fees.reduce((acc, fee) => {
@@ -287,12 +390,14 @@ exports.getAllStudents = async (req, res) => {
       return acc;
     }, {});
 
-    // Enrich student data with fee status using the same logic as getStudentDescription
+    // Enrich student data with fee status
     const enrichedStudents = students.map(student => {
       const studentFees = feesByStudent[student._id.toString()] || [];
       
-      // Use the same getFeeStatus function that works correctly
-      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods || []);
+      // Calculate fee status with dynamic start date
+      const feeStartDate = getFeeCalculationStartDate(student.dateOfJoining);
+      const { paidMonths, dueMonths, totalPaid } = getFeeStatus(studentFees, student.inactivePeriods, feeStartDate);
+      
       const isFeeDefaulter = dueMonths.length > 0;
 
       return {
@@ -300,8 +405,9 @@ exports.getAllStudents = async (req, res) => {
         isFeeDefaulter,
         totalDueMonths: dueMonths.length,
         totalPaid,
-        dueMonths: dueMonths.slice(0, 3), // Show first 3 due months for preview
-        totalDueMonthsCount: dueMonths.length // Full count
+        dueMonths: dueMonths.slice(0, 3),
+        totalDueMonthsCount: dueMonths.length,
+        feeCalculationStart: feeStartDate
       };
     });
 
@@ -353,13 +459,12 @@ exports.getAllStudents = async (req, res) => {
 
 
 
-// Set Inactive Period (existing)
+// 1. Set Inactive Period (POST /api/students/:id/set-inactive)
 exports.setInactivePeriod = async (req, res) => {
   try {
     const { id } = req.params;
     const { from, to, reason } = req.body;
 
-    // Validate inputs
     if (!isValidObjectId(id)) {
       return res.status(400).json({ success: false, message: 'Invalid student ID' });
     }
@@ -367,27 +472,24 @@ exports.setInactivePeriod = async (req, res) => {
       return res.status(400).json({ success: false, message: 'From date is required' });
     }
 
-    // Find student and validate
     const student = await Student.findById(id);
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    // Convert dates to comparable format
     const newFrom = new Date(from);
     const newTo = to ? new Date(to) : null;
 
-    // Check for overlapping/duplicate periods
+    // Check for overlapping periods
     const hasConflict = student.inactivePeriods.some(period => {
       const existingFrom = new Date(period.from);
       const existingTo = period.to ? new Date(period.to) : null;
 
-      // Check if new period overlaps with existing period
       return (
-        (newTo === null && existingTo === null) || // Both are open-ended
-        (newTo === null && newFrom <= existingTo) || // New is open-ended and overlaps
-        (existingTo === null && existingFrom <= newTo) || // Existing is open-ended and overlaps
-        (newFrom <= existingTo && newTo >= existingFrom) // Standard overlap
+        (newTo === null && existingTo === null) ||
+        (newTo === null && newFrom <= existingTo) ||
+        (existingTo === null && existingFrom <= newTo) ||
+        (newFrom <= existingTo && newTo >= existingFrom)
       );
     });
 
@@ -398,29 +500,32 @@ exports.setInactivePeriod = async (req, res) => {
       });
     }
 
-    // Add new inactive period
-    student.inactivePeriods.push({ 
-      from: newFrom, 
-      to: newTo,
-      reason: reason || undefined 
-    });
-    
-    // Update status if not already inactive
-    if (student.activityStatus !== 'inactive') {
-      student.activityStatus = 'inactive';
-    }
+    const updatedInactivePeriods = [
+      ...student.inactivePeriods,
+      { from: newFrom, to: newTo, reason: reason || '' }
+    ];
 
-    await student.save();
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          inactivePeriods: updatedInactivePeriods,
+          activityStatus: 'inactive'
+        }
+      },
+      { new: true, runValidators: false }
+    );
 
     res.json({ 
       success: true, 
       message: 'Inactive period set successfully', 
       data: {
-        inactivePeriods: student.inactivePeriods,
-        status: student.activityStatus
+        inactivePeriods: updatedStudent.inactivePeriods,
+        status: updatedStudent.activityStatus
       }
     });
   } catch (err) {
+    console.error('Set inactive error:', err.message);
     res.status(500).json({ 
       success: false, 
       message: 'Failed to set inactive period', 
@@ -429,7 +534,7 @@ exports.setInactivePeriod = async (req, res) => {
   }
 };
 
-// Reactivate Student (new)
+// 2. Reactivate Student (PUT /api/students/:id/reactivate)
 exports.reactivateStudent = async (req, res) => {
   try {
     const { id } = req.params;
@@ -443,24 +548,33 @@ exports.reactivateStudent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    // Update the latest inactive period if it's open-ended
+    // Close any open-ended inactive periods
     const openPeriod = student.inactivePeriods.find(p => !p.to);
     if (openPeriod) {
       openPeriod.to = new Date();
     }
 
-    student.activityStatus = 'active';
-    await student.save();
+    await Student.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          activityStatus: 'active',
+          inactivePeriods: student.inactivePeriods
+        }
+      },
+      { new: true, runValidators: false }
+    );
 
     res.json({
       success: true,
       message: 'Student reactivated successfully',
       data: {
-        status: student.status,
+        status: 'active',
         inactivePeriods: student.inactivePeriods
       }
     });
   } catch (err) {
+    console.error('Reactivate error:', err.message);
     res.status(500).json({
       success: false,
       message: 'Failed to reactivate student',
@@ -469,7 +583,7 @@ exports.reactivateStudent = async (req, res) => {
   }
 };
 
-// Get Inactive Periods (new)
+// 3. Get Inactive Periods (GET /api/students/:id/inactive-periods)
 exports.getInactivePeriods = async (req, res) => {
   try {
     const { id } = req.params;
@@ -479,7 +593,7 @@ exports.getInactivePeriods = async (req, res) => {
     }
 
     const student = await Student.findById(id)
-      .select('inactivePeriods status name admissionNumber');
+      .select('inactivePeriods activityStatus name admissionNumber');
     
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
@@ -491,12 +605,13 @@ exports.getInactivePeriods = async (req, res) => {
         student: {
           name: student.name,
           admissionNumber: student.admissionNumber,
-          status: student.status
+          status: student.activityStatus
         },
         inactivePeriods: student.inactivePeriods
       }
     });
   } catch (err) {
+    console.error('Get inactive periods error:', err.message);
     res.status(500).json({
       success: false,
       message: 'Failed to get inactive periods',
@@ -505,43 +620,142 @@ exports.getInactivePeriods = async (req, res) => {
   }
 };
 
-// Remove Inactive Period (new)
+// 4. Remove Inactive Period (DELETE /api/students/:id/inactive-periods/:periodId)
 exports.removeInactivePeriod = async (req, res) => {
   try {
     const { id, periodId } = req.params;
     
-    if (!isValidObjectId(id) || !isValidObjectId(periodId)) {
-      return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid student ID' });
     }
 
-    const student = await Student.findByIdAndUpdate(
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
       id,
       { $pull: { inactivePeriods: { _id: periodId } } },
       { new: true }
     );
 
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
+    let needsStatusUpdate = false;
+    if (updatedStudent.inactivePeriods.length === 0 && updatedStudent.activityStatus === 'inactive') {
+      needsStatusUpdate = true;
+      await Student.findByIdAndUpdate(
+        id,
+        { $set: { activityStatus: 'active' } },
+        { new: true }
+      );
     }
 
-    // Update status if no remaining inactive periods
-    if (student.inactivePeriods.length === 0) {
-      student.status = 'active';
-      await student.save();
-    }
+    const finalStudent = needsStatusUpdate 
+      ? await Student.findById(id) 
+      : updatedStudent;
 
     res.json({
       success: true,
       message: 'Inactive period removed successfully',
       data: {
-        inactivePeriods: student.inactivePeriods,
-        status: student.activityStatus
+        inactivePeriods: finalStudent.inactivePeriods,
+        status: finalStudent.activityStatus
       }
     });
   } catch (err) {
+    console.error('Remove inactive period error:', err.message);
     res.status(500).json({
       success: false,
       message: 'Failed to remove inactive period',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// 5. Update Inactive Period (PUT /api/students/:id/inactive-periods/:periodId)
+exports.updateInactivePeriod = async (req, res) => {
+  try {
+    const { id, periodId } = req.params;
+    const { from, to, reason } = req.body;
+    
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid student ID' });
+    }
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const period = student.inactivePeriods.id(periodId);
+    if (!period) {
+      return res.status(404).json({ success: false, message: 'Inactive period not found' });
+    }
+
+    if (from) period.from = new Date(from);
+    if (to !== undefined) period.to = to ? new Date(to) : null;
+    if (reason !== undefined) period.reason = reason;
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { $set: { inactivePeriods: student.inactivePeriods } },
+      { new: true, runValidators: false }
+    );
+
+    res.json({
+      success: true,
+      message: 'Inactive period updated successfully',
+      data: {
+        inactivePeriods: updatedStudent.inactivePeriods
+      }
+    });
+  } catch (err) {
+    console.error('Update inactive period error:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update inactive period',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// 6. Update Inactive Period Reason Only (PUT /api/students/:id/inactive-periods/:periodId/reason)
+exports.updateInactivePeriodReason = async (req, res) => {
+  try {
+    const { id, periodId } = req.params;
+    const { reason } = req.body;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid student ID' });
+    }
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const period = student.inactivePeriods.id(periodId);
+    if (!period) {
+      return res.status(404).json({ success: false, message: 'Inactive period not found' });
+    }
+
+    period.reason = reason || '';
+
+    await Student.findByIdAndUpdate(
+      id,
+      { $set: { inactivePeriods: student.inactivePeriods } },
+      { new: true, runValidators: false }
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Reason updated successfully'
+    });
+  } catch (err) {
+    console.error('Update reason error:', err.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update reason', 
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }

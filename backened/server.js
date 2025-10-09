@@ -5,11 +5,14 @@ const errorHandler = require('./middleware/errorHandler');
 const path = require('path');
 const { protect } = require('./middleware/auth');
 const cors = require('cors');
+const student = require('./models/student');
+const fs=require("fs")
 
 
 const app= express();
 
 connectDB();
+
 
 
 app.use(cors());
@@ -21,6 +24,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
+
 // Routes
 app.use('/api/students', protect,require('./routes/studentRoutes'));
 app.use('/api/fees', protect,require('./routes/feesRoutes'));
@@ -28,6 +33,10 @@ app.use('/api/expenditures', require('./routes/expenditureRoutes'));//protect
 app.use('/api/match-incomes',require('./routes/MatchIncomeRoutes'));//protect
 app.use('/api/reports', protect,require('./routes/reportRoute'));
 app.use('/api/auth',require('./routes/authRoutes'))
+app.use('/api/students', protect, require('./routes/studentRoutes'));
+
+
+
 
 // Global error handler
 app.use(errorHandler);

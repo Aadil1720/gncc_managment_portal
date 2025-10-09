@@ -1,11 +1,160 @@
 import api from './api';
+import { pdf } from '@react-pdf/renderer';
+import FeeSlipDocument from '../utils/FeeSlipDocument';
+
+// ==================== FRONTEND PDF GENERATION FUNCTIONS ====================
+
+// Generate PDF using React-PDF
+export const generateFeeSlipReactPDF = async (feeData, studentData) => {
+  try {
+    const blob = await pdf(<FeeSlipDocument feeData={feeData} studentData={studentData} />).toBlob();
+    return { success: true, blob };
+  } catch (error) {
+    console.error('React PDF generation error:', error);
+    return { 
+      success: false, 
+      error: 'Failed to generate PDF' 
+    };
+  }
+};
+
+// View PDF in new tab
+export const viewFeeSlipFrontend = async (feeData, studentData) => {
+  try {
+    const result = await generateFeeSlipReactPDF(feeData, studentData);
+    
+    if (!result.success) {
+      return result;
+    }
+
+    const pdfUrl = URL.createObjectURL(result.blob);
+    window.open(pdfUrl, '_blank');
+    
+    // Clean up after some time
+    setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+
+    return { success: true, message: 'Fee slip opened in new tab' };
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to view fee slip'
+    };
+  }
+};
+
+// Download PDF
+export const downloadFeeSlipFrontend = async (feeData, studentData, filename = null) => {
+  try {
+    const result = await generateFeeSlipReactPDF(feeData, studentData);
+    
+    if (!result.success) {
+      return result;
+    }
+
+    const defaultFilename = `FeeReceipt_${studentData.name}_${feeData.month}_${feeData.year}.pdf`;
+    const downloadFilename = filename || defaultFilename;
+    
+    // Create download link
+    const url = URL.createObjectURL(result.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = downloadFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    return { success: true, message: 'Fee slip downloaded' };
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to download fee slip'
+    };
+  }
+};
+
+// Share via WhatsApp
+export const shareFeeSlipOnWhatsAppFrontend = async (feeData, studentData) => {
+  try {
+    const message = `Fee Receipt for ${studentData.name}
+📅 Month: ${feeData.month} ${feeData.year}
+💰 Amount Paid: ₹${feeData.totalAmountPaid?.toLocaleString() || '0'}
+    
+Generated from Greater Noida Cricket Club Management System`;
+
+    const whatsappUrl = `https://wa.intent/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+
+    return { success: true, message: 'Opening WhatsApp...' };
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to share fee slip'
+    };
+  }
+};
+
+// Frontend Fee Slip Manager
+export const FrontendFeeSlipManager = {
+  // Generate and view slip immediately
+  async viewSlip(feeData, studentData) {
+    return await viewFeeSlipFrontend(feeData, studentData);
+  },
+
+  // Generate and download slip immediately
+  async downloadSlip(feeData, studentData, filename = null) {
+    return await downloadFeeSlipFrontend(feeData, studentData, filename);
+  },
+
+  // Share slip via WhatsApp
+  async shareOnWhatsApp(feeData, studentData) {
+    return await shareFeeSlipOnWhatsAppFrontend(feeData, studentData);
+  },
+
+  // Handle fee creation with instant slip generation
+  async createFeeWithInstantSlip(feeData, studentData, onSuccess = null) {
+    try {
+      // Create fee record first
+      const createResponse = await createFee(feeData);
+      
+      if (!createResponse.success) {
+        return createResponse;
+      }
+
+      // Immediately generate slip on frontend
+      if (onSuccess) {
+        onSuccess('slip_ready', 'Fee submitted! Slip is ready for download.');
+      }
+
+      return {
+        success: true,
+        fee: createResponse.fee,
+        slipStatus: 'ready',
+        message: 'Fee submitted successfully. Slip can be generated instantly.'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to process fee submission'
+      };
+    }
+  }
+};
+
+// ==================== BACKEND API FUNCTIONS ====================
 
 // Create a new fee record
 export const createFee = async (feeData) => {
   try {
     const response = await api.post('/fees/submit', feeData);
     const { success, message, fee } = response.data;
-    return { success, message, fee };
+    return { 
+      success, 
+      message, 
+      fee
+    };
   } catch (error) {
     console.error('createFee API error:', error.response?.data || error.message);
     return {
@@ -17,11 +166,8 @@ export const createFee = async (feeData) => {
 
 // Get all fees with pagination and filtering
 export const getFees = async (params = {}) => {
-
-  
   try {
     const response = await api.get('/fees/by/monthAndYear/all', { params });
-    console.log(response)
     return { success: true, data: response.data };
   } catch (error) {
     return {
@@ -96,74 +242,36 @@ export const getFeeSummary = async (studentId) => {
   }
 };
 
-// View fee slip
-export const viewFeeSlip = async (id) => {
+// Bulk fee operations
+export const createBulkFees = async (fees) => {
   try {
-    const response = await api.get(`/fees/${id}/slip/view`, {
-      params: { admissionNumber, month, year },
-      responseType: 'blob'
-    });
+    const response = await api.post('/fees/bulk', { fees });
     return { success: true, data: response.data };
   } catch (error) {
     return {
       success: false,
-      error: error.response?.data?.message || 'Failed to download fee slip'
+      error: error.response?.data?.message || 'Failed to create bulk fees'
     };
   }
 };
 
-// Resend fee slip email
-export const resendFeeSlipEmail = async (admissionNumber, month, year) => {
-  try {
-    const response = await api.post('/fees/resend-slip', {
-      admissionNumber, month, year
-    });
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data?.message || 'Failed to resend fee slip'
-    };
-  }
-};
+// ==================== EXPORT DEFAULT ====================
 
-// Generate fee slip
-export const generateFeeSlip = async (feeId) => {
-  try {
-    const response = await api.post(`/fees/generate-slip/${feeId}`);
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data?.message || 'Failed to generate fee slip'
-    };
-  }
-};
-
-// Filter defaulters
-export const filterByFeeDefaulter = async (defaulterStatus, params = {}) => {
-  try {
-    const response = await api.get(`/students/defaulters/${defaulterStatus}`, { params });
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data?.message || 'Failed to filter defaulters'
-    };
-  }
-};
-
-// Monthly fee report
-export const getMonthlyFeeReport = async (month, year) => {
-  try {
-    const response = await api.get('/fees/monthly-report', {
-      params: { month, year }
-    });
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data?.message || 'Failed to generate monthly report'
-    };
-  }
+export default {
+  // Frontend PDF Generation (Primary)
+  generateFeeSlipReactPDF,
+  viewFeeSlipFrontend,
+  downloadFeeSlipFrontend,
+  shareFeeSlipOnWhatsAppFrontend,
+  FrontendFeeSlipManager,
+  
+  // Core Fee Operations
+  createFee,
+  getFees,
+  getFeeById,
+  updateFee,
+  deleteFee,
+  getFeeHistoryByStudent,
+  getFeeSummary,
+  createBulkFees
 };

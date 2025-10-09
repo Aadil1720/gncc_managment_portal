@@ -15,17 +15,24 @@ const logger = winston.createLogger({
 });
 
 const connectDB = async () => {
+   
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            maxPoolSize: 10, // Connection pooling for scalability
-            serverSelectionTimeoutMS: 5000, // Timeout for server selection
-            socketTimeoutMS: 45000, // Timeout for socket inactivity
-        });
-        console.log('MongoDB connected successfully');
+        MONGO_URI="mongodb+srv://gncc_admin_adil:Muz15pKRmtMz7XmX@cluster0.hlzhz.mongodb.net/gncc_db?retryWrites=true&w=majority&appName=Cluster0";
 
-        // Ensure indexes are created
+    
+        await mongoose.connect(MONGO_URI,{
+            maxPoolSize: 10,
+            minPoolSize: 5, // Added min pool size for better performance
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 10000, // Added connection timeout  
+        });
+
+        //Ensure indexes are created
         mongoose.model('Student').createIndexes();
         mongoose.model('Fee').createIndexes();
+        
+        console.log('✅ MongoDB connected successfully!');
     } catch (error) {
         logger.error('MongoDB connection error', {
             message: error.message,

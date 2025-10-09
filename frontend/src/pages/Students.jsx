@@ -277,10 +277,10 @@ const Students = () => {
   };
 
   // Open delete confirmation dialog
-  const handleDeleteClick = (student) => {
+  const handleDeleteClick = (studentId) => {
     setDeleteDialog({
       open: true,
-      student: student,
+      studentId,
       loading: false
     });
   };
@@ -290,7 +290,7 @@ const Students = () => {
     setDeleteDialog(prev => ({ ...prev, loading: true }));
     
     try {
-      const response = await studentService.deleteStudent(deleteDialog.student._id);
+      const response = await studentService.deleteStudent( deleteDialog.studentId);
       if (response.success) {
         enqueueSnackbar('Student deleted successfully', { variant: 'success' });
         fetchStudents();
@@ -301,9 +301,9 @@ const Students = () => {
       enqueueSnackbar('Error deleting student', { variant: 'error' });
     } finally {
       setDeleteDialog({
-        open: false,
-        student: null,
-        loading: false
+    open: false,
+    studentId: null,
+    loading: false
       });
     }
   };
@@ -538,7 +538,6 @@ const Students = () => {
         open={deleteDialog.open}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        student={deleteDialog.student}
         loading={deleteDialog.loading}
       />
 
