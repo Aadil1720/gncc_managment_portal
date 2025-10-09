@@ -75,7 +75,7 @@ export const downloadFeeSlipFrontend = async (feeData, studentData, filename = n
   }
 };
 
-// Share via WhatsApp
+// Share via WhatsApp with direct number support
 export const shareFeeSlipOnWhatsAppFrontend = async (feeData, studentData) => {
   try {
     const message = `Fee Receipt for ${studentData.name}
@@ -84,10 +84,28 @@ export const shareFeeSlipOnWhatsAppFrontend = async (feeData, studentData) => {
     
 Generated from Greater Noida Cricket Club Management System`;
 
-    const whatsappUrl = `https://wa.intent/?text=${encodeURIComponent(message)}`;
+    let whatsappUrl;
+    
+    // If parent contact number is available, open WhatsApp directly with that number
+    if (studentData.parentContact) {
+      // Clean the phone number - remove any non-digit characters
+      const cleanPhone = studentData.parentContact.replace(/\D/g, '');
+      
+      // Format: https://wa.me/<number>?text=<message>
+      whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    } else {
+      // Fallback to regular WhatsApp share
+      whatsappUrl = `https://wa.intent/?text=${encodeURIComponent(message)}`;
+    }
+    
     window.open(whatsappUrl, '_blank');
 
-    return { success: true, message: 'Opening WhatsApp...' };
+    return { 
+      success: true, 
+      message: studentData.parentContact ? 
+        `Opening WhatsApp for ${studentData.parentContact}` : 
+        'Opening WhatsApp...' 
+    };
   } catch (error) {
     return {
       success: false,

@@ -162,7 +162,8 @@ const Fees = () => {
     
     const studentData = {
       name: currentFee.studentId?.name,
-      admissionNumber: currentFee.studentId?.admissionNumber
+      admissionNumber: currentFee.studentId?.admissionNumber,
+       parentContact: currentFee.studentId?.parentContact
     };
 
     const result = await shareFeeSlipOnWhatsAppFrontend(currentFee, studentData);
