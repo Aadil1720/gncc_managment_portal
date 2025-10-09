@@ -17,10 +17,9 @@ const logger = winston.createLogger({
 const connectDB = async () => {
    
     try {
-        MONGO_URI="mongodb+srv://gncc_admin_adil:Muz15pKRmtMz7XmX@cluster0.hlzhz.mongodb.net/gncc_db?retryWrites=true&w=majority&appName=Cluster0";
 
     
-        await mongoose.connect(MONGO_URI,{
+        await mongoose.connect(process.env.MONGO_URI,{
             maxPoolSize: 10,
             minPoolSize: 5, // Added min pool size for better performance
             serverSelectionTimeoutMS: 5000,
