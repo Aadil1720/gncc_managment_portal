@@ -5,7 +5,8 @@ import {
   TableHead, TableRow, TextField,
   Typography, useMediaQuery, useTheme, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Stack, Alert
+  IconButton, Stack, Alert,
+  TablePagination // ADD THIS IMPORT
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -66,6 +67,7 @@ const Fees = () => {
       if (response.success) {
         setFees(response.data.fees || []);
         setTotalCount(response.data.total || 0);
+        console.log(response.data.fees[0].studentId)
       } else {
         enqueueSnackbar(response.error || 'Failed to load fees', { variant: 'error' });
       }
@@ -131,7 +133,8 @@ const Fees = () => {
     const studentData = {
       name: currentFee.studentId?.name,
       admissionNumber: currentFee.studentId?.admissionNumber,
-      fatherName: currentFee.studentId?.fatherName
+      fatherName: currentFee.studentId?.fatherName,
+      parentContact: currentFee.studentId?.contactNumber
     };
 
     const result = await viewFeeSlipFrontend(currentFee, studentData);
@@ -163,8 +166,9 @@ const Fees = () => {
     const studentData = {
       name: currentFee.studentId?.name,
       admissionNumber: currentFee.studentId?.admissionNumber,
-       parentContact: currentFee.studentId?.parentContact
+      parentContact: currentFee.studentId?.contactNumber
     };
+    console.log(studentData.parentContact)
 
     const result = await shareFeeSlipOnWhatsAppFrontend(currentFee, studentData);
     if (!result.success) {
@@ -470,7 +474,7 @@ const Fees = () => {
             ) : (
               <TableRow>
                 <TableCell 
-                  colSpan={6} 
+                  colSpan={5} 
                   align="center" 
                   sx={{ py: 4 }}
                 >
@@ -481,6 +485,32 @@ const Fees = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* PAGINATION COMPONENT - RESTORED */}
+      <TablePagination
+        component="div"
+        count={totalCount}
+        page={page}
+        onPageChange={(_, newPage) => setPage(newPage)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => {
+          setRowsPerPage(parseInt(e.target.value, 10));
+          setPage(0);
+        }}
+        rowsPerPageOptions={[5, 10, 25, 50]} // Added 50 as an option
+        sx={{
+          '& .MuiTablePagination-toolbar': {
+            px: isMobile ? 1 : 2,
+            py: isMobile ? 0.5 : 1,
+            minHeight: isMobile ? '40px' : '56px',
+            fontSize: isMobile ? '0.75rem' : '0.875rem',
+            gap: isMobile ? 1 : 2,
+          },
+          '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+            fontSize: isMobile ? '0.75rem' : '0.875rem',
+          }
+        }}
+      />
 
       {/* Fee Form Dialog */}
       <FeeForm
@@ -537,6 +567,11 @@ const Fees = () => {
                 <Typography variant="body2" color="textSecondary">
                   Amount: ₹{currentFee.totalAmountPaid?.toLocaleString()}
                 </Typography>
+                {currentFee.studentId?.contactNumber && (
+                  <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+                    📱 Contact: {currentFee.studentId.contactNumber}
+                  </Typography>
+                )}
                 {currentFee.remarks && (
                   <Typography variant="body2" color="textSecondary">
                     Remarks: {currentFee.remarks}
@@ -579,7 +614,10 @@ const Fees = () => {
                     }
                   }}
                 >
-                  Share on WhatsApp
+                  {currentFee.studentId?.contactNumber ? 
+                    `Share via WhatsApp to ${currentFee.studentId.contactNumber}` : 
+                    'Share on WhatsApp'
+                  }
                 </Button>
               </Stack>
             </Box>

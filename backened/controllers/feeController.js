@@ -588,7 +588,7 @@ exports.getFeeById = asyncHandler(async (req, res) => {
   }
 
   const fee = await Fee.findById(feeId)
-    .populate('studentId', 'name admissionNumber email contactNumber fatherName')
+    .populate('studentId', 'name admissionNumber email contactNumber fatherName contactNumber')
     .select('-__v')
     .lean();
 
@@ -653,7 +653,7 @@ exports.listFees = asyncHandler(async (req, res) => {
     Fee.find(query)
       .populate({
         path: 'studentId',
-        select: 'name fatherName admissionNumber inactivePeriods dateOfJoining',
+        select: 'name fatherName admissionNumber inactivePeriods dateOfJoining contactNumber',
         options: { lean: true }
       })
       .select('admissionFees tuitionFees transportFees totalAmountPaid month year datePaid remarks')

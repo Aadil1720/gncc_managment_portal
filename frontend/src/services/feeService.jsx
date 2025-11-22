@@ -89,7 +89,7 @@ Generated from Greater Noida Cricket Club Management System`;
     // If parent contact number is available, open WhatsApp directly with that number
     if (studentData.parentContact) {
       // Clean the phone number - remove any non-digit characters
-      const cleanPhone = studentData.parentContact.replace(/\D/g, '');
+      const cleanPhone = studentData.parentContact;
       
       // Format: https://wa.me/<number>?text=<message>
       whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
