@@ -878,7 +878,7 @@ exports.getFeeSummary = asyncHandler(async (req, res) => {
   }
 
   const fees = await Fee.find({ studentId }).lean();
-  const { paidMonths, dueMonths, totalPaid } = getFeeStatus(fees, student.inactivePeriods);
+  const { paidMonths, dueMonths, totalPaid } = getFeeStatus(fees, student.inactivePeriods, student.dateOfJoining);
 
   const response = {
     success: true,
